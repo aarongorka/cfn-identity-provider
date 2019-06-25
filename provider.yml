@@ -22,7 +22,7 @@ Resources:
   ProviderCreator:
     Type: AWS::Lambda::Function
     Properties:
-      Runtime: python2.7
+      Runtime: python3.7
       Handler: index.lambda_handler
       MemorySize: 128
       Role: !GetAtt LambdaExecutionRole.Arn
@@ -117,3 +117,47 @@ Resources:
                   - logs:CreateLogStream
                   - logs:PutLogEvents
                 Resource: "*"
+
+  # https://saml-doc.okta.com/SAML_Docs/How-to-Configure-SAML-2.0-for-Amazon-Web-Service#scenarioA
+  # Step 3: Generate the AWS API Access Key for Okta to Download AWS Roles
+  User:
+    Type: AWS::IAM::User
+    Properties:
+      UserName: OktaSSOuser
+
+  Policy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - "iam:ListRoles"
+              - "iamListAccountAliases"
+            Resource: "*"
+      PolicyName: "Okta-SSO-User-Policy"
+      Users:
+        - !Ref User
+
+Outputs:
+  IdentityProviderName:
+    Description: "Name of the provider"
+    Value: !Ref SamlProviderName
+    Export:
+      Name: !Sub "${AWS::StackName}-identity-provider-name"
+  IdentityProviderArn:
+    Description: "ARN to use in federated role definition"
+    Value: !Ref IdentityProvider
+    Export:
+      Name: !Sub "${AWS::StackName}-identity-provider-arn"
+  UserName:
+    Description: "User's logical name"
+    Value: !Ref User
+    Export:
+      Name: !Sub "${AWS::StackName}-user-name"
+  UserArn:
+    Description: "User's ARN"
+    Value: !GetAtt User.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-user-arn"
